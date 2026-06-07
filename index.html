@@ -1,0 +1,685 @@
+```react
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  Menu, X, Phone, MapPin, Mail, ChevronRight, 
+  CheckCircle, Clock, Crosshair, UserCheck, 
+  ShieldCheck, Video, Briefcase, Shield,
+  ChevronDown, MessageCircle, Activity, ArrowRight
+} from 'lucide-react';
+
+// --- Custom CSS for Advanced Animations ---
+const customStyles = `
+  @keyframes marquee {
+    0% { transform: translateX(0%); }
+    100% { transform: translateX(-100%); }
+  }
+  .animate-marquee {
+    display: flex;
+    width: 200%;
+    animation: marquee 25s linear infinite;
+  }
+  .animate-marquee:hover {
+    animation-play-state: paused;
+  }
+  @keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
+  }
+  .animate-blob {
+    animation: blob 7s infinite;
+  }
+  .animation-delay-2000 {
+    animation-delay: 2s;
+  }
+  .animation-delay-4000 {
+    animation-delay: 4s;
+  }
+  .glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+`;
+
+// --- Custom SVG Logo Component (Matching Vehicle Branding) ---
+const BrandLogo = ({ className = "", dark = false }) => (
+  <div className={`flex flex-col justify-center ${className}`}>
+    <div className="flex items-end justify-center">
+      <span className={`text-2xl sm:text-3xl font-serif font-bold ${dark ? 'text-white' : 'text-slate-800'} leading-none tracking-tight`}>Dlaba</span>
+      <svg viewBox="0 0 100 110" className={`w-10 h-10 sm:w-12 sm:h-12 mx-1 ${dark ? 'text-blue-400' : 'text-blue-700'}`} fill="currentColor">
+        {/* 3 People Silhouettes & Arch */}
+        <path d="M 0 55 Q 50 25 100 55 Q 75 40 50 40 Q 25 40 0 55 Z" />
+        <circle cx="20" cy="30" r="9" />
+        <circle cx="50" cy="15" r="12" />
+        <circle cx="80" cy="30" r="9" />
+        {/* Stylized Ampersand */}
+        <text x="50" y="105" fontSize="75" fontFamily="Georgia, serif" textAnchor="middle" fontWeight="bold">&amp;</text>
+      </svg>
+      <span className={`text-2xl sm:text-3xl font-serif font-bold ${dark ? 'text-white' : 'text-slate-800'} leading-none tracking-tight`}>Son's</span>
+    </div>
+    <div className="flex justify-between items-center w-full mt-1.5 px-1">
+      <span className={`text-[9px] sm:text-[11px] ${dark ? 'text-slate-300' : 'text-slate-600'} font-sans tracking-[0.2em] uppercase`}>Protection</span>
+      <span className={`text-[9px] sm:text-[11px] ${dark ? 'text-slate-300' : 'text-slate-600'} font-sans tracking-[0.2em] uppercase`}>Services</span>
+    </div>
+  </div>
+);
+
+// --- Scroll Animation Component ---
+const FadeInSection = ({ children, delay = 0, direction = 'up' }) => {
+  const [isVisible, setVisible] = useState(false);
+  const domRef = useRef();
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          setTimeout(() => setVisible(true), delay);
+          observer.unobserve(entry.target); 
+        }
+      });
+    }, { threshold: 0.1 });
+    
+    if (domRef.current) observer.observe(domRef.current);
+    return () => { if (domRef.current) observer.unobserve(domRef.current); };
+  }, [delay]);
+
+  const getTransform = () => {
+    if (isVisible) return 'translate-y-0 translate-x-0';
+    if (direction === 'up') return 'translate-y-12';
+    if (direction === 'left') return 'translate-x-12';
+    if (direction === 'right') return '-translate-x-12';
+    return 'translate-y-12';
+  };
+
+  return (
+    <div ref={domRef} className={`transition-all duration-1000 ease-out transform ${isVisible ? 'opacity-100' : 'opacity-0'} ${getTransform()}`}>
+      {children}
+    </div>
+  );
+};
+
+// --- Animated Counter Component ---
+const CountUp = ({ end, duration = 2000, suffix = "" }) => {
+  const [count, setCount] = useState(0);
+  const [isVisible, setIsVisible] = useState(false);
+  const countRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    });
+    if (countRef.current) observer.observe(countRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    let startTimestamp = null;
+    const step = (timestamp) => {
+      if (!startTimestamp) startTimestamp = timestamp;
+      const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+      setCount(Math.floor(progress * end));
+      if (progress < 1) window.requestAnimationFrame(step);
+    };
+    window.requestAnimationFrame(step);
+  }, [isVisible, end, duration]);
+
+  return <span ref={countRef}>{count}{suffix}</span>;
+};
+
+// --- Rotating Text Component ---
+const RotatingText = ({ words }) => {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % words.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [words.length]);
+
+  return (
+    <span className="text-blue-500 inline-block min-w-[280px] transition-all duration-500 ease-in-out">
+      {words[index]}
+    </span>
+  );
+};
+
+export default function App() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    setFormSubmitted(true);
+    setTimeout(() => setFormSubmitted(false), 5000);
+  };
+
+  const handleNavClick = (e, targetId) => {
+    e.preventDefault();
+    const element = document.getElementById(targetId.replace('#', ''));
+    if (element) {
+      const topOffset = element.getBoundingClientRect().top + window.scrollY - 80;
+      window.scrollTo({ top: topOffset, behavior: 'smooth' });
+    }
+    setIsMobileMenuOpen(false);
+  };
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  const navLinks = [
+    { name: 'Home', href: '#home' },
+    { name: 'About Us', href: '#about' },
+    { name: 'Services', href: '#services' },
+    { name: 'Portfolio', href: '#experience' },
+    { name: 'Contact', href: '#contact' },
+  ];
+
+  const services = [
+    {
+      title: 'Physical Guarding',
+      description: 'Grade A-C PSIRA registered officers for retail, residential estates, and industrial sites. Fully supervised with random inspections.',
+      icon: <ShieldCheck size={36} />
+    },
+    {
+      title: 'Armed Response & Tactical',
+      description: '24/7 dedicated Armed Response vehicles with GPS tracking. Static Tactical Teams available with riot gear for high-risk mitigation.',
+      icon: <Crosshair size={36} />
+    },
+    {
+      title: 'VIP & Escort Protection',
+      description: 'Discreet VIP close protection bodyguards. Bridging and Out-of-City high-risk cargo escorts utilizing soft-skin scout vehicles.',
+      icon: <UserCheck size={36} />
+    },
+    {
+      title: 'Electronic Surveillance',
+      description: 'Installation and monitoring of CCTV, Fire Detection systems, Access Control, and Intercoms linked to our 24Hr Control Room.',
+      icon: <Video size={36} />
+    }
+  ];
+
+  const clients = [
+    "Spar Superstore (Diepsloot)", "Boxer Superstore (Kliptown)", "Bophelong Construction", 
+    "Icon Construction", "Yethembe Coal Mine", "Siyavuya Umso JV", "Siyavuya Power Projects", "NNT Engineering"
+  ];
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 overflow-x-hidden">
+      <style dangerouslySetInnerHTML={{ __html: customStyles }} />
+
+      {/* Main Navigation - Floating & Elegant */}
+      <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-lg py-2' : 'bg-white py-4'}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center">
+            {/* Logo */}
+            <div className="flex-shrink-0 cursor-pointer group" onClick={scrollToTop}>
+              <BrandLogo className="transform transition-transform group-hover:scale-105 duration-300" />
+            </div>
+
+            {/* Desktop Menu */}
+            <div className="hidden lg:flex items-center space-x-8">
+              {navLinks.map((link) => (
+                <a 
+                  key={link.name} 
+                  href={link.href} 
+                  onClick={(e) => handleNavClick(e, link.href)}
+                  className="text-slate-700 hover:text-blue-700 font-bold text-sm uppercase tracking-wider transition-colors relative group"
+                >
+                  {link.name}
+                  <span className="absolute -bottom-2 left-0 w-0 h-0.5 bg-blue-600 transition-all duration-300 group-hover:w-full"></span>
+                </a>
+              ))}
+              <a 
+                href="#contact" 
+                onClick={(e) => handleNavClick(e, '#contact')}
+                className="relative inline-flex items-center justify-center px-6 py-3 overflow-hidden font-bold text-white bg-blue-700 rounded-full shadow-xl group hover:shadow-blue-500/50 transition-all"
+              >
+                <span className="absolute inset-0 w-full h-full -mt-1 rounded-lg opacity-30 bg-gradient-to-b from-transparent via-transparent to-black"></span>
+                <span className="relative flex items-center">Get a Quote <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform"/></span>
+              </a>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="lg:hidden flex items-center">
+              <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-slate-800 hover:text-blue-700 focus:outline-none p-2 bg-slate-100 rounded-lg">
+                {isMobileMenuOpen ? <X size={28} /> : <Menu size={28} />}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu Dropdown */}
+        <div className={`lg:hidden absolute w-full bg-white shadow-2xl transition-all duration-300 origin-top overflow-hidden ${isMobileMenuOpen ? 'max-h-[400px] border-t border-slate-100' : 'max-h-0'}`}>
+            <div className="px-4 pt-2 pb-6 space-y-2">
+              {navLinks.map((link) => (
+                <a
+                  key={link.name}
+                  href={link.href}
+                  onClick={(e) => handleNavClick(e, link.href)}
+                  className="block px-4 py-3 rounded-xl text-base font-bold text-slate-700 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                >
+                  {link.name}
+                </a>
+              ))}
+              <a 
+                href="#contact" 
+                onClick={(e) => handleNavClick(e, '#contact')}
+                className="block w-full text-center px-4 py-3 mt-4 text-base font-bold text-white bg-blue-700 rounded-xl shadow-lg"
+              >
+                Get a Quote
+              </a>
+            </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section id="home" className="relative bg-slate-950 text-white min-h-[95vh] flex items-center pt-20 overflow-hidden">
+        {/* Animated Background Blobs */}
+        <div className="absolute top-10 -left-10 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-[100px] opacity-40 animate-blob"></div>
+        <div className="absolute top-20 -right-10 w-96 h-96 bg-cyan-500 rounded-full mix-blend-multiply filter blur-[100px] opacity-30 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-20 left-1/3 w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-[100px] opacity-30 animate-blob animation-delay-4000"></div>
+        
+        {/* Grid pattern overlay */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wNykiLz48L3N2Zz4=')] opacity-40 z-0"></div>
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-24 grid lg:grid-cols-12 gap-12 items-center">
+          
+          <div className="lg:col-span-7">
+            <FadeInSection direction="right">
+              <div className="inline-flex items-center py-2 px-4 rounded-full glass-card text-cyan-300 font-bold text-xs uppercase tracking-widest mb-8 border border-white/10 shadow-lg">
+                <span className="relative flex h-2 w-2 mr-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                </span>
+                24/7 Rapid Response On Standby
+              </div>
+              
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight mb-6 leading-[1.1]">
+                Be Secure And <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
+                  Protect Yours.
+                </span>
+              </h1>
+              
+              <p className="mt-6 text-lg sm:text-xl text-slate-300 mb-10 leading-relaxed font-medium max-w-xl">
+                Pioneering tactical security, VIP protection, and rapid armed response across Gauteng and Mpumalanga since 2016.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-5">
+                <a href="#services" onClick={(e) => handleNavClick(e, '#services')} className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-full font-bold text-lg transition-all shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] flex items-center justify-center group">
+                  Explore Services <ChevronDown className="ml-2 group-hover:translate-y-1 transition-transform" size={20}/>
+                </a>
+                <a href="tel:0826281035" className="glass-card hover:bg-white/10 text-white px-8 py-4 rounded-full font-bold text-lg transition-all flex items-center justify-center group">
+                  <Phone className="mr-2 text-cyan-400 group-hover:rotate-12 transition-transform" size={20}/> 082 628 1035
+                </a>
+              </div>
+            </FadeInSection>
+          </div>
+
+          {/* Floating Hero Cards for Engagement */}
+          <div className="hidden lg:block lg:col-span-5 relative h-[500px]">
+             <FadeInSection delay={300} direction="left">
+               <div className="absolute top-10 right-0 glass-card p-6 rounded-3xl w-72 shadow-2xl animate-blob border-t border-l border-white/20">
+                  <div className="flex items-center justify-between mb-5">
+                    <div className="flex items-center">
+                      <div className="bg-blue-500/20 p-2 rounded-lg mr-3">
+                        <Activity size={20} className="text-cyan-400" />
+                      </div>
+                      <span className="text-white font-bold tracking-wide">Live Control Room</span>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="flex justify-between text-xs mb-1 font-bold text-slate-400"><span>Patrol Units</span> <span>Active</span></div>
+                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-cyan-400 w-3/4 shadow-[0_0_10px_#22d3ee]"></div></div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between text-xs mb-1 font-bold text-slate-400"><span>CCTV Feeds</span> <span>Monitoring</span></div>
+                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden"><div className="h-full bg-blue-500 w-full shadow-[0_0_10px_#3b82f6]"></div></div>
+                    </div>
+                  </div>
+                  <div className="mt-6 pt-4 border-t border-white/10 flex justify-between items-center">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-widest font-black">System Status</span>
+                    <span className="text-xs text-green-400 font-bold flex items-center"><CheckCircle size={12} className="mr-1"/> Optimal</span>
+                  </div>
+               </div>
+
+               <div className="absolute bottom-10 -left-10 glass-card p-6 rounded-3xl w-64 shadow-2xl animate-blob animation-delay-2000 border-b border-r border-white/20">
+                  <div className="bg-blue-600 w-14 h-14 rounded-2xl flex items-center justify-center mb-5 shadow-lg">
+                    <ShieldCheck size={28} className="text-white" />
+                  </div>
+                  <h4 className="text-3xl font-black text-white mb-1">Grade A-C</h4>
+                  <p className="text-cyan-300 text-sm font-bold tracking-wide">Tactical Officers Deployed</p>
+               </div>
+             </FadeInSection>
+          </div>
+        </div>
+      </section>
+
+      {/* Dynamic Stats Section - Overlapping the Hero */}
+      <section className="relative z-20 -mt-16 mx-4 sm:mx-8 lg:mx-auto max-w-6xl">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 lg:p-12 border border-slate-100">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-slate-100">
+             <div className="px-4">
+               <h4 className="text-4xl md:text-5xl font-black text-blue-700"><CountUp end={8} suffix="+" /></h4>
+               <p className="text-slate-500 text-xs font-black uppercase tracking-[0.2em] mt-3">Years Active</p>
+             </div>
+             <div className="px-4">
+               <h4 className="text-4xl md:text-5xl font-black text-blue-700"><CountUp end={100} suffix="%" /></h4>
+               <p className="text-slate-500 text-xs font-black uppercase tracking-[0.2em] mt-3">Black Female Owned</p>
+             </div>
+             <div className="px-4">
+               <h4 className="text-4xl md:text-5xl font-black text-blue-700"><CountUp end={24} suffix="/7" /></h4>
+               <p className="text-slate-500 text-xs font-black uppercase tracking-[0.2em] mt-3">Rapid Response</p>
+             </div>
+             <div className="px-4">
+               <h4 className="text-4xl md:text-5xl font-black text-blue-700"><CountUp end={100} suffix="%" /></h4>
+               <p className="text-slate-500 text-xs font-black uppercase tracking-[0.2em] mt-3">PSIRA Compliant</p>
+             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* About Us */}
+      <section id="about" className="py-24 bg-slate-50 relative overflow-hidden">
+        {/* Decorative background element */}
+        <div className="absolute top-0 right-0 w-1/3 h-full bg-blue-50/50 skew-x-12 transform origin-top-right z-0"></div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <FadeInSection>
+            <div className="lg:grid lg:grid-cols-2 lg:gap-20 items-center">
+              <div className="mb-12 lg:mb-0">
+                <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-700 font-bold text-xs uppercase tracking-widest mb-6">
+                  Who We Are
+                </div>
+                <h2 className="text-3xl md:text-5xl font-black text-slate-900 mb-6 leading-tight">Doing it right, with <br/> right motives.</h2>
+                <p className="text-lg text-slate-600 mb-6 leading-relaxed font-medium">
+                  Founded by Mr. B.E. Zazaza, Dlaba & Son's Protection Services emerged from the township to the urban competitive market. We empower the economy utilizing localized expertise combined with strict national standards.
+                </p>
+                <p className="text-lg text-slate-600 mb-8 leading-relaxed font-medium">
+                  Led by Administrator Sophie Ma-Agente Motaung, we dispatch random day/night inspectors to ensure guards are alert, preventing criminals from establishing any pattern of surveillance.
+                </p>
+                
+                <div className="flex items-center space-x-4">
+                  <div className="flex -space-x-4">
+                     {/* Abstract avatars representing the team */}
+                     <div className="w-12 h-12 rounded-full border-2 border-white bg-blue-600 flex items-center justify-center text-white font-bold">SM</div>
+                     <div className="w-12 h-12 rounded-full border-2 border-white bg-slate-800 flex items-center justify-center text-white font-bold">BZ</div>
+                     <div className="w-12 h-12 rounded-full border-2 border-white bg-cyan-500 flex items-center justify-center text-white font-bold"><Shield size={20}/></div>
+                  </div>
+                  <span className="text-sm font-bold text-slate-500 uppercase tracking-widest">Leadership Team</span>
+                </div>
+              </div>
+              
+              <div className="space-y-6 relative">
+                <div className="absolute -left-8 -top-8 w-24 h-24 bg-blue-100 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
+                
+                <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 hover:-translate-y-2 transition-transform duration-300 relative z-10 group">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="bg-blue-50 p-4 rounded-2xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                      <MapPin size={28} />
+                    </div>
+                    <span className="text-5xl font-black text-slate-100 group-hover:text-blue-50 transition-colors">01</span>
+                  </div>
+                  <h4 className="text-2xl font-black text-slate-900 mb-2">National Reach</h4>
+                  <p className="text-slate-600 font-medium">Headquartered in Riverside View (Fourways) with active tactical operations in Emalahleni (Mpumalanga).</p>
+                </div>
+
+                <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 hover:-translate-y-2 transition-transform duration-300 relative z-10 group ml-0 lg:ml-12">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="bg-cyan-50 p-4 rounded-2xl text-cyan-600 group-hover:bg-cyan-500 group-hover:text-white transition-colors duration-300">
+                      <Clock size={28} />
+                    </div>
+                    <span className="text-5xl font-black text-slate-100 group-hover:text-cyan-50 transition-colors">02</span>
+                  </div>
+                  <h4 className="text-2xl font-black text-slate-900 mb-2">Continuous Training</h4>
+                  <p className="text-slate-600 font-medium">Strict personnel vetting & continuous tactical refresher courses to maintain elite readiness.</p>
+                </div>
+              </div>
+            </div>
+          </FadeInSection>
+        </div>
+      </section>
+
+      {/* Services Section */}
+      <section id="services" className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <FadeInSection>
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-50 text-blue-700 font-bold text-xs uppercase tracking-widest mb-6">
+                Core Offerings
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-6">Holistic Safeguarding</h2>
+              <p className="text-lg text-slate-600 font-medium">Solutions tailored to your unique risks following strict Needs Analysis protocols.</p>
+            </div>
+            
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {services.map((service, index) => (
+                <FadeInSection key={index} delay={index * 150} direction="up">
+                  <div className="bg-slate-50 rounded-3xl p-8 h-full border border-slate-100 hover:bg-blue-700 hover:text-white transition-all duration-500 group shadow-lg hover:shadow-2xl hover:-translate-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="bg-white text-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mb-8 shadow-sm group-hover:scale-110 group-hover:text-blue-700 transition-all duration-300">
+                        {service.icon}
+                      </div>
+                      <h3 className="text-xl font-black mb-4 leading-tight">{service.title}</h3>
+                      <p className="text-slate-600 group-hover:text-blue-100 font-medium text-sm leading-relaxed transition-colors duration-300">{service.description}</p>
+                    </div>
+                    <div className="mt-8 pt-4 border-t border-slate-200 group-hover:border-blue-500/50 transition-colors">
+                      <span className="text-sm font-bold text-blue-600 group-hover:text-white flex items-center">
+                        Learn more <ChevronRight size={16} className="ml-1 group-hover:translate-x-1 transition-transform"/>
+                      </span>
+                    </div>
+                  </div>
+                </FadeInSection>
+              ))}
+            </div>
+          </FadeInSection>
+        </div>
+      </section>
+
+      {/* Corporate Experience / Trusted By - Infinite Marquee */}
+      <section id="experience" className="py-20 bg-slate-900 overflow-hidden relative">
+        <div className="absolute inset-0 bg-blue-900/20 mix-blend-multiply"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12 text-center relative z-10">
+          <h3 className="text-cyan-400 font-black uppercase tracking-widest text-sm mb-3">Portfolio</h3>
+          <h2 className="text-3xl md:text-4xl font-black text-white">Trusted Industry Partners</h2>
+        </div>
+
+        {/* Infinite Scroll Wrapper */}
+        <div className="relative w-full overflow-hidden before:absolute before:left-0 before:top-0 before:z-20 before:h-full before:w-20 before:bg-gradient-to-r before:from-slate-900 before:to-transparent after:absolute after:right-0 after:top-0 after:z-20 after:h-full after:w-20 after:bg-gradient-to-l after:from-slate-900 after:to-transparent">
+          <div className="animate-marquee items-center space-x-6">
+             {[...clients, ...clients].map((client, index) => (
+               <div key={index} className="flex-shrink-0 bg-slate-800/80 backdrop-blur-sm border border-slate-700/50 py-5 px-10 rounded-2xl shadow-xl hover:bg-blue-600/20 hover:border-blue-500/50 transition-all cursor-pointer">
+                 <span className="font-black text-slate-300 text-lg whitespace-nowrap tracking-wide">{client}</span>
+               </div>
+             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Contact Section */}
+      <section id="contact" className="py-24 bg-slate-50 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <FadeInSection>
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-700 font-bold text-xs uppercase tracking-widest mb-6">
+                Connect With Us
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black text-slate-900 mb-4">Deploy DSP Security</h2>
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              {/* Contact Info */}
+              <div className="space-y-8">
+                <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 flex items-start group hover:shadow-xl hover:border-blue-200 transition-all">
+                  <div className="bg-blue-50 p-4 rounded-2xl mr-6 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <MapPin size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-black text-slate-900 mb-2">Gauteng Headquarters</h4>
+                    <p className="text-slate-600 font-medium">1521 Francolin Crescent, Riverside View Ext 30</p>
+                    <p className="text-slate-600 font-medium">Fourways / Diepsloot, 2191</p>
+                  </div>
+                </div>
+
+                <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 flex items-start group hover:shadow-xl hover:border-cyan-200 transition-all">
+                  <div className="bg-cyan-50 p-4 rounded-2xl mr-6 text-cyan-600 group-hover:bg-cyan-500 group-hover:text-white transition-colors">
+                    <MapPin size={28} />
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-black text-slate-900 mb-2">Mpumalanga Branches</h4>
+                    <p className="text-slate-600 font-medium">65 Tuinroete Road, Jakaroo Park, Emalahleni, 1035</p>
+                    <p className="text-slate-600 font-medium mt-1">Stand 8594 Bill Andrew's St, Kwa-Guqa Ext 09</p>
+                  </div>
+                </div>
+                
+                <div className="grid sm:grid-cols-2 gap-6 pt-4">
+                  <div className="bg-slate-900 text-white p-8 rounded-3xl shadow-lg hover:-translate-y-1 transition-transform">
+                    <p className="text-xs text-blue-400 font-black uppercase tracking-widest mb-2">24Hr Mobile</p>
+                    <p className="text-2xl font-black">082 628 1035</p>
+                  </div>
+                  <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 hover:-translate-y-1 transition-transform">
+                    <p className="text-xs text-slate-500 font-black uppercase tracking-widest mb-2">Landline</p>
+                    <p className="text-2xl font-black text-slate-900">011 464 5042</p>
+                  </div>
+                  <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 sm:col-span-2 hover:-translate-y-1 transition-transform flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-slate-500 font-black uppercase tracking-widest mb-2">Email</p>
+                      <p className="text-lg font-bold text-slate-900">admin@dspsecurity.co.za</p>
+                    </div>
+                    <Mail size={32} className="text-slate-200" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Form */}
+              <div className="bg-white p-8 md:p-10 rounded-3xl shadow-2xl border border-slate-100 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -z-0"></div>
+                <h3 className="text-3xl font-black text-slate-900 mb-8 relative z-10">Request an Assessment</h3>
+                
+                {formSubmitted ? (
+                  <div className="bg-green-50 border border-green-200 text-green-700 p-8 rounded-2xl text-center h-[400px] flex flex-col justify-center items-center">
+                    <div className="bg-green-100 p-4 rounded-full mb-4">
+                      <CheckCircle className="text-green-600" size={48} />
+                    </div>
+                    <h4 className="text-2xl font-black mb-2">Request Received</h4>
+                    <p className="font-medium text-green-800">Our operations manager will contact you shortly.</p>
+                  </div>
+                ) : (
+                  <form onSubmit={handleFormSubmit} className="space-y-6 relative z-10">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">First Name</label>
+                        <input type="text" required className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all bg-slate-50/50 font-medium" placeholder="John" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-slate-700 mb-2">Last Name</label>
+                        <input type="text" required className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all bg-slate-50/50 font-medium" placeholder="Doe" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Phone Number</label>
+                      <input type="tel" required className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all bg-slate-50/50 font-medium" placeholder="082 123 4567" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Service Required</label>
+                      <select className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all bg-slate-50/50 font-bold text-slate-700">
+                        <option>Physical Guarding</option>
+                        <option>Armed Response & Tactical</option>
+                        <option>VIP & Escort Protection</option>
+                        <option>Electronic Surveillance</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-2">Message</label>
+                      <textarea rows="4" className="w-full px-5 py-4 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all bg-slate-50/50 font-medium" placeholder="Specify your security needs..."></textarea>
+                    </div>
+                    <button type="submit" className="w-full bg-blue-700 text-white font-black py-5 rounded-xl hover:bg-blue-800 transition-colors shadow-lg hover:shadow-blue-600/50 uppercase tracking-widest text-sm flex justify-center items-center">
+                      Submit Request <ArrowRight size={18} className="ml-2"/>
+                    </button>
+                  </form>
+                )}
+              </div>
+            </div>
+          </FadeInSection>
+        </div>
+      </section>
+
+      {/* Floating WhatsApp Action Button */}
+      <a 
+        href="https://wa.me/27826281035" 
+        target="_blank" 
+        rel="noopener noreferrer" 
+        className="fixed bottom-6 right-6 bg-green-500 text-white p-4 rounded-full shadow-2xl hover:bg-green-600 hover:scale-110 transition-all z-50 flex items-center justify-center group"
+        aria-label="Chat on WhatsApp"
+      >
+        <span className="absolute inset-0 rounded-full bg-green-500 opacity-40 animate-ping"></span>
+        <MessageCircle size={32} className="relative z-10" />
+        <span className="absolute right-20 bg-slate-900 text-white px-4 py-2 rounded-lg shadow-xl text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none before:absolute before:right-[-6px] before:top-1/2 before:-translate-y-1/2 before:border-l-8 before:border-l-slate-900 before:border-y-8 before:border-y-transparent">
+          Chat with Control Room
+        </span>
+      </a>
+
+      {/* Footer */}
+      <footer className="bg-slate-950 text-slate-400 py-16 border-t border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12 border-b border-slate-800 pb-12">
+            <div className="col-span-1 md:col-span-1">
+              <BrandLogo dark={true} className="mb-6 items-start -ml-2" />
+              <p className="text-sm leading-relaxed font-medium text-slate-400">
+                Trading as DSP Security Services. Elite protection ensuring safety and peace of mind across Gauteng and Mpumalanga.
+              </p>
+            </div>
+            
+            <div>
+              <h4 className="text-white font-black mb-6 uppercase tracking-widest text-sm">Legal & Reg</h4>
+              <ul className="space-y-3 text-sm font-medium">
+                <li className="flex items-center"><CheckCircle size={14} className="text-green-500 mr-2"/> Reg No: 2016/404160/07</li>
+                <li className="flex items-center"><CheckCircle size={14} className="text-green-500 mr-2"/> PSIRA: 2875053</li>
+                <li className="flex items-center"><CheckCircle size={14} className="text-green-500 mr-2"/> VAT: 4230290498</li>
+                <li className="flex items-center"><CheckCircle size={14} className="text-green-500 mr-2"/> Level 1 B-BBEE Contributor</li>
+              </ul>
+            </div>
+
+            <div className="md:col-span-2 flex flex-col md:items-end">
+              <h4 className="text-white font-black mb-6 uppercase tracking-widest text-sm">24/7 Control Room</h4>
+              <div className="bg-slate-900 p-8 rounded-3xl border border-slate-800 text-center w-full md:w-auto shadow-2xl">
+                <p className="text-4xl font-black text-blue-500 mb-2">082 628 1035</p>
+                <p className="text-slate-400 font-bold mb-6">011 464 5042</p>
+                <a href="tel:0826281035" className="inline-flex w-full justify-center items-center bg-blue-600 hover:bg-blue-500 text-white transition-all py-4 px-8 rounded-xl text-sm font-black tracking-widest uppercase shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)]">
+                  <Phone size={18} className="mr-2"/> Call Emergency
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col md:flex-row justify-between items-center text-xs font-bold text-slate-500">
+            <p className="mb-4 md:mb-0">
+              &copy; {new Date().getFullYear()} Dlaba & Son's Protection Services (Pty) Ltd. All rights reserved.
+            </p>
+            <p className="text-slate-400 tracking-widest uppercase">
+              www.dspsecurity.co.za
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+
+
+```
